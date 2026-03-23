@@ -29,6 +29,7 @@ interface Pedido {
   valor_unitario: number;
   valor_total: number;
   nome_cliente: string;
+  email_cliente: string | null;
   whatsapp_cliente: string;
   status_pedido: string;
   created_at: string;
