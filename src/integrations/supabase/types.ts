@@ -14,7 +14,175 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      pedidos: {
+        Row: {
+          codigo_pedido: string
+          created_at: string
+          email_cliente: string | null
+          id: string
+          meio_cobranca: string | null
+          nome_cliente: string
+          nome_peca: string
+          numero_parcelas: number | null
+          produto_id: string | null
+          quantidade: number
+          status_pedido: string
+          tipo_pagamento: string | null
+          updated_at: string
+          valor_total: number
+          valor_unitario: number
+          whatsapp_cliente: string
+        }
+        Insert: {
+          codigo_pedido: string
+          created_at?: string
+          email_cliente?: string | null
+          id?: string
+          meio_cobranca?: string | null
+          nome_cliente: string
+          nome_peca: string
+          numero_parcelas?: number | null
+          produto_id?: string | null
+          quantidade?: number
+          status_pedido?: string
+          tipo_pagamento?: string | null
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+          whatsapp_cliente: string
+        }
+        Update: {
+          codigo_pedido?: string
+          created_at?: string
+          email_cliente?: string | null
+          id?: string
+          meio_cobranca?: string | null
+          nome_cliente?: string
+          nome_peca?: string
+          numero_parcelas?: number | null
+          produto_id?: string | null
+          quantidade?: number
+          status_pedido?: string
+          tipo_pagamento?: string | null
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+          whatsapp_cliente?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_semijoias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos_semijoias: {
+        Row: {
+          created_at: string
+          custo_peca: number
+          custo_tag_unitario: number
+          custo_total_peca: number
+          custo_verniz_por_peca: number
+          id: string
+          lucro_estimado: number
+          margem_real: number
+          meio_cobranca: string
+          multiplicador_lucro: number
+          nome_peca: string
+          numero_parcelas: number | null
+          preco_base: number
+          preco_final: number
+          taxa_cartao: number
+          tipo_pagamento: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custo_peca?: number
+          custo_tag_unitario?: number
+          custo_total_peca?: number
+          custo_verniz_por_peca?: number
+          id?: string
+          lucro_estimado?: number
+          margem_real?: number
+          meio_cobranca?: string
+          multiplicador_lucro?: number
+          nome_peca: string
+          numero_parcelas?: number | null
+          preco_base?: number
+          preco_final?: number
+          taxa_cartao?: number
+          tipo_pagamento?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custo_peca?: number
+          custo_tag_unitario?: number
+          custo_total_peca?: number
+          custo_verniz_por_peca?: number
+          id?: string
+          lucro_estimado?: number
+          margem_real?: number
+          meio_cobranca?: string
+          multiplicador_lucro?: number
+          nome_peca?: string
+          numero_parcelas?: number | null
+          preco_base?: number
+          preco_final?: number
+          taxa_cartao?: number
+          tipo_pagamento?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transacoes_pix: {
+        Row: {
+          created_at: string
+          id: string
+          id_mercadopago: string | null
+          pedido_id: string
+          pix_text: string | null
+          qr_code_base64: string | null
+          status: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_mercadopago?: string | null
+          pedido_id: string
+          pix_text?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_mercadopago?: string | null
+          pedido_id?: string
+          pix_text?: string | null
+          qr_code_base64?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacoes_pix_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
