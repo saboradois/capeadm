@@ -407,7 +407,7 @@ export default function PedidosPixTab() {
                   <Copy className="w-4 h-4" />
                   Copiar mensagem para WhatsApp
                 </Button>
-                <Button onClick={openWhatsApp} className="gap-2 bg-[hsl(142,70%,40%)] hover:bg-[hsl(142,70%,35%)] text-[hsl(0,0%,100%)]">
+                <Button onClick={openWhatsApp} className="gap-2 bg-success hover:bg-success/90 text-success-foreground">
                   <ExternalLink className="w-4 h-4" />
                   Abrir WhatsApp Web
                 </Button>
