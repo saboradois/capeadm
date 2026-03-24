@@ -183,7 +183,7 @@ export default function PedidosPixTab() {
       'É uma alegria atender você! Muito obrigada! 💎',
     ];
     const agradecimento = agradecimentos[Math.floor(Math.random() * agradecimentos.length)];
-    return `${saudacao}, ${detailPedido.nome_cliente}! 😊\nAqui é da *CAPE Bijuterias Finas e Semijoias*.\n\n📋 *Pedido nº ${detailPedido.codigo_pedido}*\n\n🛍️ *Itens do pedido:*\n• ${detailPedido.nome_peca} — ${detailPedido.quantidade}x ${formatCurrency(detailPedido.valor_unitario)}\n\n💰 *Valor total: ${formatCurrency(detailPedido.valor_total)}*\n\n${agradecimento}\n\nSegue código Pix para realizar o pagamento 👇`;
+    return `${saudacao}, ${detailPedido.nome_cliente}! 😊\nAqui é da *✨ CAPE Bijuterias Finas e Semijoias ✨*\n\n📋 *Pedido nº ${detailPedido.codigo_pedido}*\n\n🛍️ *Itens do pedido:*\n💍 ${detailPedido.nome_peca} — ${detailPedido.quantidade}x ${formatCurrency(detailPedido.valor_unitario)}\n\n💰 *Valor total: ${formatCurrency(detailPedido.valor_total)}*\n\n${agradecimento}\n\n💳 Segue código Pix para realizar o pagamento 👇`;
   };
 
   const copyWhatsAppMessage = () => {
