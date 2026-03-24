@@ -180,8 +180,9 @@ export default function PedidosPixTab() {
       meio_cobranca: selectedProduto!.meio_cobranca,
       tipo_pagamento: selectedProduto!.tipo_pagamento,
       numero_parcelas: selectedProduto!.numero_parcelas,
-      status_pedido: statusPedido,
+      status_pedido: 'pendente',
       meio_pagamento: metodoPagamento,
+      cliente_id: clienteId,
     } as any).select().single();
 
     if (error || !pedido) {
