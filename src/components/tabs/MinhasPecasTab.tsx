@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
 import { Pencil, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, formatPercent, calcularPreco } from '@/lib/pricing';
