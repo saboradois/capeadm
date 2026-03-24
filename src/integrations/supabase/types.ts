@@ -89,6 +89,7 @@ export type Database = {
           custo_tag_unitario: number
           custo_total_peca: number
           custo_verniz_por_peca: number
+          foto_url: string | null
           id: string
           lucro_estimado: number
           margem_real: number
@@ -109,6 +110,7 @@ export type Database = {
           custo_tag_unitario?: number
           custo_total_peca?: number
           custo_verniz_por_peca?: number
+          foto_url?: string | null
           id?: string
           lucro_estimado?: number
           margem_real?: number
@@ -129,6 +131,7 @@ export type Database = {
           custo_tag_unitario?: number
           custo_total_peca?: number
           custo_verniz_por_peca?: number
+          foto_url?: string | null
           id?: string
           lucro_estimado?: number
           margem_real?: number
