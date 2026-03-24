@@ -57,6 +57,7 @@ export default function AppLayout() {
             {activeTab === 'calculadora' && <CalculadoraTab />}
             {activeTab === 'pecas' && <MinhasPecasTab />}
             {activeTab === 'pedidos' && <PedidosPixTab />}
+            {activeTab === 'clientes' && <ClientesTab />}
             {activeTab === 'ia' && <NomeadorIATab />}
             {activeTab === 'relatorio' && <RelatorioTab />}
           </motion.div>
