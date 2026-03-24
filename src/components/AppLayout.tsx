@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calculator, Gem, ShoppingCart, BarChart3, Sparkles, LogOut } from 'lucide-react';
+import { Calculator, Gem, ShoppingCart, BarChart3, Sparkles, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,7 @@ import MinhasPecasTab from './tabs/MinhasPecasTab';
 import PedidosPixTab from './tabs/PedidosPixTab';
 import RelatorioTab from './tabs/RelatorioTab';
 import NomeadorIATab from './tabs/NomeadorIATab';
+import ClientesTab from './tabs/ClientesTab';
 
 const tabs = [
   { id: 'calculadora', label: 'Calculadora', icon: Calculator },
