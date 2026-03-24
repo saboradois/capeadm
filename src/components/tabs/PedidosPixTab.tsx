@@ -689,14 +689,29 @@ export default function PedidosPixTab() {
 
               {/* WhatsApp actions */}
               <div className="flex flex-col gap-2">
-                <Button onClick={copyWhatsAppMessage} variant="secondary" className="gap-2">
-                  <Copy className="w-4 h-4" />
-                  Copiar mensagem para WhatsApp
-                </Button>
-                <Button onClick={openWhatsApp} className="gap-2 bg-success hover:bg-success/90 text-success-foreground">
-                  <ExternalLink className="w-4 h-4" />
-                  Abrir WhatsApp Web
-                </Button>
+                {detailPedido.status_pedido === 'pago' ? (
+                  <>
+                    <Button onClick={copyPaidMessage} variant="secondary" className="gap-2">
+                      <Copy className="w-4 h-4" />
+                      📩 Copiar confirmação de pagamento
+                    </Button>
+                    <Button onClick={openPaidWhatsApp} className="gap-2 bg-success hover:bg-success/90 text-success-foreground">
+                      <ExternalLink className="w-4 h-4" />
+                      ✅ Enviar confirmação via WhatsApp
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button onClick={copyWhatsAppMessage} variant="secondary" className="gap-2">
+                      <Copy className="w-4 h-4" />
+                      Copiar mensagem para WhatsApp
+                    </Button>
+                    <Button onClick={openWhatsApp} className="gap-2 bg-success hover:bg-success/90 text-success-foreground">
+                      <ExternalLink className="w-4 h-4" />
+                      Abrir WhatsApp Web
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}
