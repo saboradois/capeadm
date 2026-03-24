@@ -10,7 +10,7 @@ import { calcularPreco, formatCurrency, formatPercent, type PricingInput, type P
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-const initialInput = {
+const initialInput: PricingInput & { nome_peca: string; valor_pacote_tags: number; quantidade_tags_pacote: number; valor_verniz: number; quantidade_pecas_por_verniz: number } = {
   nome_peca: '',
   custo_peca: 0,
   valor_pacote_tags: 0,
@@ -18,8 +18,8 @@ const initialInput = {
   valor_verniz: 0,
   quantidade_pecas_por_verniz: 1,
   multiplicador_lucro: 2,
-  meio_cobranca: 'tap_to_pay_nubank' as const,
-  tipo_pagamento: 'debito' as const,
+  meio_cobranca: 'tap_to_pay_nubank',
+  tipo_pagamento: 'debito',
   numero_parcelas: 1,
 };
 
