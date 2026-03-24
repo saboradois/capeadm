@@ -14,13 +14,71 @@ serve(async (req) => {
   try {
     const MERCADOPAGO_ACCESS_TOKEN = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
     if (!MERCADOPAGO_ACCESS_TOKEN) {
-      throw new Error('MERCADOPAGO_ACCESS_TOKEN não configurado. Adicione nas secrets do projeto.');
+      throw new Error('MERCADOPAGO_ACCESS_TOKEN não configurado.');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const contentType = req.headers.get('content-type') || '';
+
+    // Handle Mercado Pago webhook notification
+    if (req.method === 'POST' && req.url.includes('?source=webhook')) {
+      const body = await req.json();
+      console.log('Webhook received:', JSON.stringify(body));
+
+      if (body.type === 'payment' && body.data?.id) {
+        const paymentId = String(body.data.id);
+
+        // Fetch payment details from Mercado Pago
+        const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          headers: { 'Authorization': `Bearer ${MERCADOPAGO_ACCESS_TOKEN}` },
+        });
+        const mpData = await mpRes.json();
+        console.log('Payment status from MP:', mpData.status, 'for payment:', paymentId);
+
+        if (mpData.status === 'approved') {
+          // Update transacoes_pix
+          const { data: txData } = await supabase
+            .from('transacoes_pix')
+            .update({ status: 'pago' })
+            .eq('id_mercadopago', paymentId)
+            .select('pedido_id')
+            .single();
+
+          if (txData?.pedido_id) {
+            // Update pedido status
+            await supabase
+              .from('pedidos')
+              .update({ status_pedido: 'pago' })
+              .eq('id', txData.pedido_id);
+            console.log('Pedido atualizado para pago:', txData.pedido_id);
+          }
+        } else if (mpData.status === 'rejected' || mpData.status === 'cancelled') {
+          const { data: txData } = await supabase
+            .from('transacoes_pix')
+            .update({ status: 'cancelado' })
+            .eq('id_mercadopago', paymentId)
+            .select('pedido_id')
+            .single();
+
+          if (txData?.pedido_id) {
+            await supabase
+              .from('pedidos')
+              .update({ status_pedido: 'cancelado' })
+              .eq('id', txData.pedido_id);
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Handle normal Pix creation request
     const { pedido_id, valor, descricao, email_cliente, nome_cliente, user_id } = await req.json();
 
     if (!pedido_id || !valor) {
@@ -29,6 +87,9 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Build webhook URL
+    const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-pix?source=webhook`;
 
     // Create Pix payment via Mercado Pago API
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -42,6 +103,7 @@ serve(async (req) => {
         transaction_amount: Number(valor),
         description: descricao || `Pedido ${pedido_id}`,
         payment_method_id: 'pix',
+        notification_url: webhookUrl,
         payer: {
           email: email_cliente || 'cliente@email.com',
           first_name: nome_cliente || 'Cliente',
