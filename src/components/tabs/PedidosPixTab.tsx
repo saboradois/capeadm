@@ -310,6 +310,36 @@ export default function PedidosPixTab() {
     return baseMsg;
   };
 
+  const buildPaidWhatsAppMessage = () => {
+    if (!detailPedido) return '';
+    const hour = new Date().getHours();
+    const saudacao = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+    const agradecimentos = [
+      'Sua confiança é o nosso maior presente! 💖✨',
+      'Obrigada por brilhar com a CAPE! Você é especial! 🌟💕',
+      'Foi uma alegria te atender! Volte sempre! 💎🤗',
+      'Que essa peça te traga muita luz e brilho! ✨💍',
+      'Amamos te ver feliz com sua escolha! Obrigada! 🥰💖',
+    ];
+    const agradecimento = agradecimentos[Math.floor(Math.random() * agradecimentos.length)];
+
+    return `${saudacao}, ${detailPedido.nome_cliente}! 😊\nAqui é da *✨ CAPE Bijuterias Finas e Semijoias ✨*\n\n✅💰 *Pagamento confirmado com sucesso!*\n\n📋 *Pedido nº ${detailPedido.codigo_pedido}*\n💍 ${detailPedido.nome_peca} — ${detailPedido.quantidade}x ${formatCurrency(detailPedido.valor_unitario)}\n💰 *Total: ${formatCurrency(detailPedido.valor_total)}*\n\n🎉 ${agradecimento}\n\n🛍️ Qualquer dúvida estamos à disposição!\nUm abraço da equipe CAPE 💕`;
+  };
+
+  const copyPaidMessage = () => {
+    const msg = buildPaidWhatsAppMessage();
+    if (!msg) return;
+    navigator.clipboard.writeText(msg);
+    toast.success('Mensagem de confirmação copiada!');
+  };
+
+  const openPaidWhatsApp = () => {
+    if (!detailPedido) return;
+    const msg = encodeURIComponent(buildPaidWhatsAppMessage());
+    const phone = detailPedido.whatsapp_cliente.replace(/\D/g, '');
+    window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+  };
+
   const copyWhatsAppMessage = () => {
     const msg = buildWhatsAppMessage();
     if (!msg) return;
