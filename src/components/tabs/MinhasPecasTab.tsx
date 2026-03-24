@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { NumberInput } from '@/components/ui/number-input';
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Pencil, Trash2, Search } from 'lucide-react';
+import { Pencil, Trash2, Search, Camera, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, formatPercent, calcularPreco } from '@/lib/pricing';
 import { toast } from 'sonner';
@@ -28,6 +28,7 @@ interface Produto {
   custo_verniz_por_peca: number;
   taxa_cartao: number;
   preco_base: number;
+  foto_url: string | null;
 }
 
 export default function MinhasPecasTab() {
@@ -39,6 +40,9 @@ export default function MinhasPecasTab() {
   const [editProduto, setEditProduto] = useState<Produto | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [manualPreco, setManualPreco] = useState<number>(0);
+  const [uploading, setUploading] = useState(false);
+  const [editFotoUrl, setEditFotoUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProdutos = async () => {
     setLoading(true);
@@ -70,6 +74,7 @@ export default function MinhasPecasTab() {
   const openEdit = (p: Produto) => {
     setEditProduto(p);
     setManualPreco(p.preco_final);
+    setEditFotoUrl(p.foto_url || null);
     setEditForm({
       nome_peca: p.nome_peca,
       custo_peca: p.custo_peca,
@@ -82,6 +87,36 @@ export default function MinhasPecasTab() {
       valor_verniz: 0,
       quantidade_pecas_por_verniz: 1,
     });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editProduto) return;
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Não autenticado');
+      const ext = file.name.split('.').pop();
+      const path = `${user.id}/${editProduto.id}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('produto-fotos').upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('produto-fotos').getPublicUrl(path);
+      const fotoUrl = urlData.publicUrl + '?t=' + Date.now();
+      await supabase.from('produtos_semijoias').update({ foto_url: fotoUrl }).eq('id', editProduto.id);
+      setEditFotoUrl(fotoUrl);
+      toast.success('Foto atualizada!');
+    } catch (err: any) {
+      toast.error('Erro ao enviar foto: ' + err.message);
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePhoto = async () => {
+    if (!editProduto) return;
+    await supabase.from('produtos_semijoias').update({ foto_url: null }).eq('id', editProduto.id);
+    setEditFotoUrl(null);
+    toast.success('Foto removida');
   };
 
   const handleEditSave = async () => {
@@ -190,7 +225,18 @@ export default function MinhasPecasTab() {
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma peça encontrada</TableCell></TableRow>
               ) : filtered.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.nome_peca}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {p.foto_url ? (
+                        <img src={p.foto_url} alt={p.nome_peca} className="w-8 h-8 rounded-md object-cover shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                          <Camera className="w-3 h-3 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="font-medium">{p.nome_peca}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{formatCurrency(p.custo_total_peca)}</TableCell>
                   <TableCell className="font-semibold text-primary">{formatCurrency(p.preco_final)}</TableCell>
                   <TableCell className="text-success">{formatCurrency(p.lucro_estimado)}</TableCell>
@@ -214,6 +260,27 @@ export default function MinhasPecasTab() {
           <DialogHeader><DialogTitle>Editar Peça</DialogTitle></DialogHeader>
           {editProduto && (
             <div className="space-y-4">
+              {/* Photo upload */}
+              <div className="flex flex-col items-center gap-2">
+                {editFotoUrl ? (
+                  <div className="relative">
+                    <img src={editFotoUrl} alt="Foto da peça" className="w-24 h-24 rounded-lg object-cover" />
+                    <button onClick={removePhoto} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-1">
+                  <Camera className="w-3 h-3" />
+                  {uploading ? 'Enviando...' : 'Adicionar foto'}
+                </Button>
+              </div>
+
               <div><Label>Nome</Label><Input value={editForm.nome_peca} onChange={(e) => setEditForm({ ...editForm, nome_peca: e.target.value })} /></div>
 
               {/* Manual price edit */}

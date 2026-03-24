@@ -19,6 +19,7 @@ interface Produto {
   meio_cobranca: string;
   tipo_pagamento: string;
   numero_parcelas: number | null;
+  foto_url: string | null;
 }
 
 interface Pedido {
@@ -73,7 +74,7 @@ export default function PedidosPixTab() {
   const fetchData = async () => {
     setLoading(true);
     const [prodRes, pedRes] = await Promise.all([
-      supabase.from('produtos_semijoias').select('id, nome_peca, preco_final, meio_cobranca, tipo_pagamento, numero_parcelas').order('nome_peca'),
+      supabase.from('produtos_semijoias').select('id, nome_peca, preco_final, meio_cobranca, tipo_pagamento, numero_parcelas, foto_url').order('nome_peca'),
       supabase.from('pedidos').select('*').order('created_at', { ascending: false }),
     ]);
     if (prodRes.data) setProdutos(prodRes.data);
@@ -314,7 +315,16 @@ export default function PedidosPixTab() {
                 <SelectTrigger><SelectValue placeholder="Selecione uma peça..." /></SelectTrigger>
                 <SelectContent>
                   {produtos.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome_peca} — {formatCurrency(p.preco_final)}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex items-center gap-2">
+                        {p.foto_url ? (
+                          <img src={p.foto_url} alt={p.nome_peca} className="w-6 h-6 rounded object-cover shrink-0" />
+                        ) : (
+                          <div className="w-6 h-6 rounded bg-muted shrink-0" />
+                        )}
+                        <span>{p.nome_peca} — {formatCurrency(p.preco_final)}</span>
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
