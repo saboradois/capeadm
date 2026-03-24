@@ -78,8 +78,54 @@ serve(async (req) => {
       });
     }
 
+    const body = await req.json();
+
+    // Handle status check request
+    if (body.action === 'check_status') {
+      const { id_mercadopago } = body;
+      if (!id_mercadopago) {
+        return new Response(JSON.stringify({ error: 'id_mercadopago é obrigatório' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${id_mercadopago}`, {
+        headers: { 'Authorization': `Bearer ${MERCADOPAGO_ACCESS_TOKEN}` },
+      });
+      const mpData = await mpRes.json();
+      console.log('Check status for payment:', id_mercadopago, 'status:', mpData.status);
+
+      let newStatus = 'pendente';
+      if (mpData.status === 'approved') newStatus = 'pago';
+      else if (mpData.status === 'rejected' || mpData.status === 'cancelled') newStatus = 'cancelado';
+
+      // Update in DB
+      if (newStatus !== 'pendente') {
+        const { data: txData } = await supabase
+          .from('transacoes_pix')
+          .update({ status: newStatus })
+          .eq('id_mercadopago', id_mercadopago)
+          .select('pedido_id')
+          .single();
+
+        if (txData?.pedido_id) {
+          const pedidoStatus = newStatus === 'pago' ? 'pago' : 'cancelado';
+          await supabase
+            .from('pedidos')
+            .update({ status_pedido: pedidoStatus })
+            .eq('id', txData.pedido_id);
+        }
+      }
+
+      return new Response(JSON.stringify({ status: newStatus, mp_status: mpData.status }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Handle normal Pix creation request
-    const { pedido_id, valor, descricao, email_cliente, nome_cliente, user_id } = await req.json();
+    const { pedido_id, valor, descricao, email_cliente, nome_cliente, user_id } = body;
 
     if (!pedido_id || !valor) {
       return new Response(JSON.stringify({ error: 'pedido_id e valor são obrigatórios' }), {

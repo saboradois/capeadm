@@ -236,20 +236,46 @@ export default function PedidosPixTab() {
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
 
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
   const updatePixStatus = async () => {
-    if (!pixData?.id_mercadopago || !detailPedido) {
-      toast.info('Sem ID Mercado Pago para consultar. Atualize manualmente.');
-      // For now, allow manual toggle
-      const newStatus = detailPedido?.status_pedido === 'pago' ? 'aguardando_pagamento' : 'pago';
-      await supabase.from('pedidos').update({ status_pedido: newStatus }).eq('id', detailPedido!.id);
-      if (pixData) await supabase.from('transacoes_pix').update({ status: newStatus === 'pago' ? 'pago' : 'pendente' }).eq('id', pixData.id);
-      toast.success(`Status atualizado para: ${newStatus}`);
-      fetchData();
-      openDetail({ ...detailPedido!, status_pedido: newStatus });
+    if (!detailPedido) return;
+
+    if (!pixData?.id_mercadopago) {
+      toast.info('Sem ID Mercado Pago para consultar.');
       return;
     }
-    // Would call edge function to check Mercado Pago status
-    toast.info('Consulta de status via API será implementada com a edge function.');
+
+    setCheckingStatus(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('mercadopago-pix', {
+        body: {
+          action: 'check_status',
+          id_mercadopago: pixData.id_mercadopago,
+        },
+      });
+
+      if (error) throw new Error(error.message);
+
+      if (data?.status === 'pago') {
+        toast.success(`🎉 Pagamento confirmado! Pedido ${detailPedido.codigo_pedido} foi pago!`);
+      } else if (data?.status === 'cancelado') {
+        toast.error(`Pagamento cancelado/rejeitado.`);
+      } else {
+        toast.info(`Status atual no Mercado Pago: ${data?.mp_status || 'pendente'}`);
+      }
+
+      fetchData();
+      // Refresh detail
+      const { data: updatedPedido } = await supabase.from('pedidos').select('*').eq('id', detailPedido.id).single();
+      if (updatedPedido) setDetailPedido(updatedPedido);
+      const { data: updatedPix } = await supabase.from('transacoes_pix').select('*').eq('pedido_id', detailPedido.id).maybeSingle();
+      setPixData(updatedPix || null);
+    } catch (err: any) {
+      toast.error('Erro ao consultar status: ' + err.message);
+    } finally {
+      setCheckingStatus(false);
+    }
   };
 
   const filteredPedidos = pedidos.filter((p) => {
@@ -436,7 +462,7 @@ export default function PedidosPixTab() {
                     )}
                     <div className="flex items-center gap-2">
                       <Badge variant={pixData.status === 'pago' ? 'default' : 'outline'}>{pixData.status}</Badge>
-                      <Button size="sm" variant="ghost" onClick={updatePixStatus} className="gap-1"><RefreshCw className="w-3 h-3" /> Atualizar status</Button>
+                      <Button size="sm" variant="ghost" onClick={updatePixStatus} disabled={checkingStatus} className="gap-1"><RefreshCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} /> {checkingStatus ? 'Consultando...' : 'Atualizar status'}</Button>
                     </div>
                   </CardContent>
                 </Card>
