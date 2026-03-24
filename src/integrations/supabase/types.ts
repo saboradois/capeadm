@@ -21,6 +21,7 @@ export type Database = {
           email_cliente: string | null
           id: string
           meio_cobranca: string | null
+          meio_pagamento: string | null
           nome_cliente: string
           nome_peca: string
           numero_parcelas: number | null
@@ -40,6 +41,7 @@ export type Database = {
           email_cliente?: string | null
           id?: string
           meio_cobranca?: string | null
+          meio_pagamento?: string | null
           nome_cliente: string
           nome_peca: string
           numero_parcelas?: number | null
@@ -59,6 +61,7 @@ export type Database = {
           email_cliente?: string | null
           id?: string
           meio_cobranca?: string | null
+          meio_pagamento?: string | null
           nome_cliente?: string
           nome_peca?: string
           numero_parcelas?: number | null
@@ -153,10 +156,12 @@ export type Database = {
           created_at: string
           id: string
           id_mercadopago: string | null
+          link_pagamento: string | null
           pedido_id: string
           pix_text: string | null
           qr_code_base64: string | null
           status: string
+          tipo: string | null
           updated_at: string
           user_id: string | null
           valor: number
@@ -165,10 +170,12 @@ export type Database = {
           created_at?: string
           id?: string
           id_mercadopago?: string | null
+          link_pagamento?: string | null
           pedido_id: string
           pix_text?: string | null
           qr_code_base64?: string | null
           status?: string
+          tipo?: string | null
           updated_at?: string
           user_id?: string | null
           valor?: number
@@ -177,10 +184,12 @@ export type Database = {
           created_at?: string
           id?: string
           id_mercadopago?: string | null
+          link_pagamento?: string | null
           pedido_id?: string
           pix_text?: string | null
           qr_code_base64?: string | null
           status?: string
+          tipo?: string | null
           updated_at?: string
           user_id?: string | null
           valor?: number
