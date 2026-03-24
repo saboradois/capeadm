@@ -51,6 +51,7 @@ export default function AppLayout() {
             {activeTab === 'calculadora' && <CalculadoraTab />}
             {activeTab === 'pecas' && <MinhasPecasTab />}
             {activeTab === 'pedidos' && <PedidosPixTab />}
+            {activeTab === 'ia' && <NomeadorIATab />}
             {activeTab === 'relatorio' && <RelatorioTab />}
           </motion.div>
         </AnimatePresence>
