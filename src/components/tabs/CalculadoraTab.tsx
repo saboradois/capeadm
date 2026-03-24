@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -83,7 +84,6 @@ export default function CalculadoraTab() {
         <p className="text-muted-foreground text-sm mt-1">Calcule o preço de venda das suas semijoias</p>
       </div>
 
-      {/* Dados da peça */}
       <Card className="glass-card">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg">Dados da Peça</CardTitle>
@@ -96,37 +96,36 @@ export default function CalculadoraTab() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Custo da peça (R$)</Label>
-              <Input type="number" step="0.01" min="0" value={form.custo_peca || ''} onChange={(e) => updateField('custo_peca', parseFloat(e.target.value) || 0)} />
+              <NumberInput decimal step={0.01} min={0} value={form.custo_peca} onValueChange={(v) => updateField('custo_peca', v)} />
             </div>
             <div>
               <Label>Multiplicador de lucro</Label>
-              <Input type="number" step="0.1" min="1" value={form.multiplicador_lucro || ''} onChange={(e) => updateField('multiplicador_lucro', parseFloat(e.target.value) || 1)} />
+              <NumberInput decimal step={0.1} min={1} value={form.multiplicador_lucro} onValueChange={(v) => updateField('multiplicador_lucro', v)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Valor pacote tags (R$)</Label>
-              <Input type="number" step="0.01" min="0" value={form.valor_pacote_tags || ''} onChange={(e) => updateField('valor_pacote_tags', parseFloat(e.target.value) || 0)} />
+              <NumberInput decimal step={0.01} min={0} value={form.valor_pacote_tags} onValueChange={(v) => updateField('valor_pacote_tags', v)} />
             </div>
             <div>
               <Label>Qtd tags no pacote</Label>
-              <Input type="number" min="1" value={form.quantidade_tags_pacote || ''} onChange={(e) => updateField('quantidade_tags_pacote', parseInt(e.target.value) || 1)} />
+              <NumberInput min={1} value={form.quantidade_tags_pacote} onValueChange={(v) => updateField('quantidade_tags_pacote', v)} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Valor verniz (R$)</Label>
-              <Input type="number" step="0.01" min="0" value={form.valor_verniz || ''} onChange={(e) => updateField('valor_verniz', parseFloat(e.target.value) || 0)} />
+              <NumberInput decimal step={0.01} min={0} value={form.valor_verniz} onValueChange={(v) => updateField('valor_verniz', v)} />
             </div>
             <div>
               <Label>Peças por verniz</Label>
-              <Input type="number" min="1" value={form.quantidade_pecas_por_verniz || ''} onChange={(e) => updateField('quantidade_pecas_por_verniz', parseInt(e.target.value) || 1)} />
+              <NumberInput min={1} value={form.quantidade_pecas_por_verniz} onValueChange={(v) => updateField('quantidade_pecas_por_verniz', v)} />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Forma de pagamento */}
       <Card className="glass-card">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg">Forma de Pagamento</CardTitle>
@@ -156,13 +155,12 @@ export default function CalculadoraTab() {
           {form.tipo_pagamento === 'credito_parcelado' && (
             <div>
               <Label>Número de parcelas</Label>
-              <Input type="number" min="2" max="12" value={form.numero_parcelas || ''} onChange={(e) => updateField('numero_parcelas', parseInt(e.target.value) || 2)} />
+              <NumberInput min={2} value={form.numero_parcelas} onValueChange={(v) => updateField('numero_parcelas', v)} />
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
         <Button onClick={handleCalc} className="flex-1 gap-2">
           <Calculator className="w-4 h-4" />
@@ -178,7 +176,6 @@ export default function CalculadoraTab() {
         </Button>
       </div>
 
-      {/* Results */}
       {result && (
         <Card className="glass-card border-primary/20">
           <CardHeader className="pb-4">

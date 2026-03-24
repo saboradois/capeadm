@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { NumberInput } from '@/components/ui/number-input';
 import { Pencil, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, formatPercent, calcularPreco } from '@/lib/pricing';
@@ -194,8 +195,8 @@ export default function MinhasPecasTab() {
             <div className="space-y-4">
               <div><Label>Nome</Label><Input value={editForm.nome_peca} onChange={(e) => setEditForm({ ...editForm, nome_peca: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><Label>Custo (R$)</Label><Input type="number" step="0.01" value={editForm.custo_peca} onChange={(e) => setEditForm({ ...editForm, custo_peca: parseFloat(e.target.value) || 0 })} /></div>
-                <div><Label>Multiplicador</Label><Input type="number" step="0.1" value={editForm.multiplicador_lucro} onChange={(e) => setEditForm({ ...editForm, multiplicador_lucro: parseFloat(e.target.value) || 1 })} /></div>
+                <div><Label>Custo (R$)</Label><NumberInput decimal step={0.01} value={editForm.custo_peca} onValueChange={(v) => setEditForm({ ...editForm, custo_peca: v })} /></div>
+                <div><Label>Multiplicador</Label><NumberInput decimal step={0.1} min={1} value={editForm.multiplicador_lucro} onValueChange={(v) => setEditForm({ ...editForm, multiplicador_lucro: v })} /></div>
               </div>
               <div>
                 <Label>Meio de cobrança</Label>
