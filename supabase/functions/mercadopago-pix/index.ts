@@ -68,6 +68,7 @@ serve(async (req) => {
       status: 'pendente',
       qr_code_base64: qrCodeBase64,
       pix_text: pixText,
+      user_id: user_id || null,
     });
 
     if (insertError) {
