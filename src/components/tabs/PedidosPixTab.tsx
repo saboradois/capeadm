@@ -137,9 +137,35 @@ export default function PedidosPixTab() {
     }
     setSavingOrder(true);
     const codigoPedido = generateOrderCode();
-    
-    const isPaid = metodoPagamento === 'dinheiro';
-    const statusPedido = isPaid ? 'pago' : 'aguardando_pagamento';
+
+    // Save or find client
+    const whatsappClean = whatsappCliente.replace(/\D/g, '');
+    let clienteId: string | null = null;
+    try {
+      const { data: existingCliente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('whatsapp', whatsappClean)
+        .maybeSingle();
+
+      if (existingCliente) {
+        clienteId = existingCliente.id;
+        // Update name/email if changed
+        await supabase.from('clientes').update({
+          nome: nomeCliente,
+          email: emailCliente || null,
+        }).eq('id', existingCliente.id);
+      } else {
+        const { data: newCliente } = await supabase.from('clientes').insert({
+          nome: nomeCliente,
+          whatsapp: whatsappClean,
+          email: emailCliente || null,
+        }).select('id').single();
+        if (newCliente) clienteId = newCliente.id;
+      }
+    } catch (err) {
+      console.error('Erro ao salvar cliente:', err);
+    }
 
     const { data: pedido, error } = await supabase.from('pedidos').insert({
       codigo_pedido: codigoPedido,
@@ -154,8 +180,9 @@ export default function PedidosPixTab() {
       meio_cobranca: selectedProduto!.meio_cobranca,
       tipo_pagamento: selectedProduto!.tipo_pagamento,
       numero_parcelas: selectedProduto!.numero_parcelas,
-      status_pedido: statusPedido,
+      status_pedido: 'pendente',
       meio_pagamento: metodoPagamento,
+      cliente_id: clienteId,
     } as any).select().single();
 
     if (error || !pedido) {
@@ -339,6 +366,7 @@ export default function PedidosPixTab() {
 
   const statusBadge = (s: string) => {
     const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      pendente: { label: 'Pendente', variant: 'outline' },
       rascunho: { label: 'Rascunho', variant: 'secondary' },
       aguardando_pagamento: { label: 'Aguardando', variant: 'outline' },
       pago: { label: 'Pago ✅', variant: 'default' },
@@ -374,6 +402,7 @@ export default function PedidosPixTab() {
             <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos status</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
               <SelectItem value="rascunho">Rascunho</SelectItem>
               <SelectItem value="aguardando_pagamento">Aguardando</SelectItem>
               <SelectItem value="pago">Pago</SelectItem>

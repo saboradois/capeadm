@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calculator, Gem, ShoppingCart, BarChart3, Sparkles, LogOut } from 'lucide-react';
+import { Calculator, Gem, ShoppingCart, BarChart3, Sparkles, LogOut, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,11 +9,13 @@ import MinhasPecasTab from './tabs/MinhasPecasTab';
 import PedidosPixTab from './tabs/PedidosPixTab';
 import RelatorioTab from './tabs/RelatorioTab';
 import NomeadorIATab from './tabs/NomeadorIATab';
+import ClientesTab from './tabs/ClientesTab';
 
 const tabs = [
   { id: 'calculadora', label: 'Calculadora', icon: Calculator },
   { id: 'pecas', label: 'Peças', icon: Gem },
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingCart },
+  { id: 'clientes', label: 'Clientes', icon: Users },
   { id: 'ia', label: 'IA', icon: Sparkles },
   { id: 'relatorio', label: 'Relatório', icon: BarChart3 },
 ] as const;
@@ -55,6 +57,7 @@ export default function AppLayout() {
             {activeTab === 'calculadora' && <CalculadoraTab />}
             {activeTab === 'pecas' && <MinhasPecasTab />}
             {activeTab === 'pedidos' && <PedidosPixTab />}
+            {activeTab === 'clientes' && <ClientesTab />}
             {activeTab === 'ia' && <NomeadorIATab />}
             {activeTab === 'relatorio' && <RelatorioTab />}
           </motion.div>
