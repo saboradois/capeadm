@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, QrCode, Copy, ExternalLink, Eye, RefreshCw } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { ShoppingCart, QrCode, Copy, ExternalLink, Eye, RefreshCw, Banknote, CreditCard, Link2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/pricing';
 import { toast } from 'sonner';
@@ -33,6 +34,7 @@ interface Pedido {
   email_cliente: string | null;
   whatsapp_cliente: string;
   status_pedido: string;
+  meio_pagamento: string | null;
   created_at: string;
 }
 
@@ -44,9 +46,11 @@ interface TransacaoPix {
   qr_code_base64: string | null;
   pix_text: string | null;
   id_mercadopago: string | null;
+  link_pagamento: string | null;
+  tipo: string | null;
 }
 
-const NOME_LOJA = 'Essenza Semijoias';
+type MetodoPagamento = 'pix' | 'dinheiro' | 'credito' | 'debito';
 
 export default function PedidosPixTab() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -63,13 +67,22 @@ export default function PedidosPixTab() {
   const [emailCliente, setEmailCliente] = useState('');
   const [whatsappCliente, setWhatsappCliente] = useState('');
   const [savingOrder, setSavingOrder] = useState(false);
+  const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamento>('pix');
+
+  // Cash payment state
+  const [precisaTroco, setPrecisaTroco] = useState(false);
+  const [valorRecebido, setValorRecebido] = useState(0);
 
   // Filters
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterCliente, setFilterCliente] = useState('');
 
+  // Status check
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
   const selectedProduto = produtos.find((p) => p.id === produtoId);
   const valorTotal = (selectedProduto?.preco_final || 0) * quantidade;
+  const valorTroco = precisaTroco ? Math.max(0, valorRecebido - valorTotal) : 0;
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,7 +91,7 @@ export default function PedidosPixTab() {
       supabase.from('pedidos').select('*').order('created_at', { ascending: false }),
     ]);
     if (prodRes.data) setProdutos(prodRes.data);
-    if (pedRes.data) setPedidos(pedRes.data);
+    if (pedRes.data) setPedidos(pedRes.data as any);
     setLoading(false);
   };
 
@@ -90,11 +103,7 @@ export default function PedidosPixTab() {
       .channel('pedidos-status')
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'pedidos',
-        },
+        { event: 'UPDATE', schema: 'public', table: 'pedidos' },
         (payload) => {
           const updated = payload.new as any;
           const old = payload.old as any;
@@ -106,7 +115,6 @@ export default function PedidosPixTab() {
             );
           }
 
-          // Update local state
           setPedidos((prev) =>
             prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
           );
@@ -114,9 +122,7 @@ export default function PedidosPixTab() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const generateOrderCode = () => {
@@ -124,13 +130,17 @@ export default function PedidosPixTab() {
     return `PED-${String(num).padStart(4, '0')}`;
   };
 
-  const createOrder = async (withPix: boolean) => {
+  const createOrder = async () => {
     if (!produtoId || !nomeCliente.trim() || !whatsappCliente.trim()) {
       toast.error('Preencha produto, nome e WhatsApp do cliente');
       return;
     }
     setSavingOrder(true);
     const codigoPedido = generateOrderCode();
+    
+    const isPaid = metodoPagamento === 'dinheiro';
+    const statusPedido = isPaid ? 'pago' : 'aguardando_pagamento';
+
     const { data: pedido, error } = await supabase.from('pedidos').insert({
       codigo_pedido: codigoPedido,
       produto_id: produtoId,
@@ -144,8 +154,9 @@ export default function PedidosPixTab() {
       meio_cobranca: selectedProduto!.meio_cobranca,
       tipo_pagamento: selectedProduto!.tipo_pagamento,
       numero_parcelas: selectedProduto!.numero_parcelas,
-      status_pedido: withPix ? 'aguardando_pagamento' : 'rascunho',
-    }).select().single();
+      status_pedido: statusPedido,
+      meio_pagamento: metodoPagamento,
+    } as any).select().single();
 
     if (error || !pedido) {
       toast.error('Erro ao criar pedido: ' + (error?.message || 'Erro desconhecido'));
@@ -153,10 +164,14 @@ export default function PedidosPixTab() {
       return;
     }
 
-    if (withPix) {
-      await generatePix(pedido);
+    const pedidoData = pedido as any as Pedido;
+
+    if (metodoPagamento === 'pix') {
+      await generatePix(pedidoData);
+    } else if (metodoPagamento === 'credito' || metodoPagamento === 'debito') {
+      await generateCardLink(pedidoData);
     } else {
-      toast.success(`Pedido ${codigoPedido} criado!`);
+      toast.success(`✅ Pedido ${codigoPedido} criado — Pagamento em dinheiro${precisaTroco ? ` (Troco: ${formatCurrency(valorTroco)})` : ''}!`);
     }
 
     setSavingOrder(false);
@@ -180,9 +195,30 @@ export default function PedidosPixTab() {
       });
       if (error) throw new Error(error.message || 'Erro na API Pix');
       if (data?.error) throw new Error(data.error);
-      toast.success(`Pedido ${pedido.codigo_pedido} criado com Pix!`);
+      toast.success(`Pedido ${pedido.codigo_pedido} criado com Pix! 💸`);
     } catch (err: any) {
       toast.error('Pedido criado, mas erro ao gerar Pix: ' + err.message);
+    }
+  };
+
+  const generateCardLink = async (pedido: Pedido) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke('mercadopago-pix', {
+        body: {
+          action: 'create_card_link',
+          pedido_id: pedido.id,
+          valor: pedido.valor_total,
+          descricao: `Pedido ${pedido.codigo_pedido} - ${pedido.nome_peca}`,
+          nome_cliente: pedido.nome_cliente,
+          user_id: user?.id,
+        },
+      });
+      if (error) throw new Error(error.message || 'Erro na API');
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Pedido ${pedido.codigo_pedido} criado com link de pagamento! 💳`);
+    } catch (err: any) {
+      toast.error('Pedido criado, mas erro ao gerar link: ' + err.message);
     }
   };
 
@@ -192,18 +228,28 @@ export default function PedidosPixTab() {
     setNomeCliente('');
     setEmailCliente('');
     setWhatsappCliente('');
+    setMetodoPagamento('pix');
+    setPrecisaTroco(false);
+    setValorRecebido(0);
   };
 
   const openDetail = async (pedido: Pedido) => {
     setDetailPedido(pedido);
     const { data } = await supabase.from('transacoes_pix').select('*').eq('pedido_id', pedido.id).maybeSingle();
-    setPixData(data || null);
+    setPixData(data as any || null);
   };
 
   const copyPixCode = () => {
     if (pixData?.pix_text) {
       navigator.clipboard.writeText(pixData.pix_text);
       toast.success('Código Pix copiado!');
+    }
+  };
+
+  const copyPaymentLink = () => {
+    if (pixData?.link_pagamento) {
+      navigator.clipboard.writeText(pixData.link_pagamento);
+      toast.success('Link de pagamento copiado!');
     }
   };
 
@@ -219,7 +265,22 @@ export default function PedidosPixTab() {
       'É uma alegria atender você! Muito obrigada! 💎',
     ];
     const agradecimento = agradecimentos[Math.floor(Math.random() * agradecimentos.length)];
-    return `${saudacao}, ${detailPedido.nome_cliente}! 😊\nAqui é da *✨ CAPE Bijuterias Finas e Semijoias ✨*\n\n📋 *Pedido nº ${detailPedido.codigo_pedido}*\n\n🛍️ *Itens do pedido:*\n💍 ${detailPedido.nome_peca} — ${detailPedido.quantidade}x ${formatCurrency(detailPedido.valor_unitario)}\n\n💰 *Valor total: ${formatCurrency(detailPedido.valor_total)}*\n\n${agradecimento}\n\n💳 Segue código Pix para realizar o pagamento 👇`;
+
+    const baseMsg = `${saudacao}, ${detailPedido.nome_cliente}! 😊\nAqui é da *✨ CAPE Bijuterias Finas e Semijoias ✨*\n\n📋 *Pedido nº ${detailPedido.codigo_pedido}*\n\n🛍️ *Itens do pedido:*\n💍 ${detailPedido.nome_peca} — ${detailPedido.quantidade}x ${formatCurrency(detailPedido.valor_unitario)}\n\n💰 *Valor total: ${formatCurrency(detailPedido.valor_total)}*\n\n${agradecimento}`;
+
+    const meio = detailPedido.meio_pagamento || 'pix';
+
+    if (meio === 'pix') {
+      return `${baseMsg}\n\n💳 Segue código Pix para realizar o pagamento 👇`;
+    } else if (meio === 'dinheiro') {
+      return `${baseMsg}\n\n💵 Pagamento recebido em *dinheiro*. ✅\n\nObrigada e volte sempre! 🤗`;
+    } else if (meio === 'credito') {
+      return `${baseMsg}\n\n💳 Segue o link para pagamento no *cartão de crédito* 👇${pixData?.link_pagamento ? `\n\n🔗 ${pixData.link_pagamento}` : ''}`;
+    } else if (meio === 'debito') {
+      return `${baseMsg}\n\n💳 Segue o link para pagamento no *cartão de débito* 👇${pixData?.link_pagamento ? `\n\n🔗 ${pixData.link_pagamento}` : ''}`;
+    }
+
+    return baseMsg;
   };
 
   const copyWhatsAppMessage = () => {
@@ -236,11 +297,8 @@ export default function PedidosPixTab() {
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
 
-  const [checkingStatus, setCheckingStatus] = useState(false);
-
   const updatePixStatus = async () => {
     if (!detailPedido) return;
-
     if (!pixData?.id_mercadopago) {
       toast.info('Sem ID Mercado Pago para consultar.');
       return;
@@ -249,12 +307,8 @@ export default function PedidosPixTab() {
     setCheckingStatus(true);
     try {
       const { data, error } = await supabase.functions.invoke('mercadopago-pix', {
-        body: {
-          action: 'check_status',
-          id_mercadopago: pixData.id_mercadopago,
-        },
+        body: { action: 'check_status', id_mercadopago: pixData.id_mercadopago },
       });
-
       if (error) throw new Error(error.message);
 
       if (data?.status === 'pago') {
@@ -266,11 +320,10 @@ export default function PedidosPixTab() {
       }
 
       fetchData();
-      // Refresh detail
       const { data: updatedPedido } = await supabase.from('pedidos').select('*').eq('id', detailPedido.id).single();
-      if (updatedPedido) setDetailPedido(updatedPedido);
+      if (updatedPedido) setDetailPedido(updatedPedido as any);
       const { data: updatedPix } = await supabase.from('transacoes_pix').select('*').eq('pedido_id', detailPedido.id).maybeSingle();
-      setPixData(updatedPix || null);
+      setPixData(updatedPix as any || null);
     } catch (err: any) {
       toast.error('Erro ao consultar status: ' + err.message);
     } finally {
@@ -288,19 +341,24 @@ export default function PedidosPixTab() {
     const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       rascunho: { label: 'Rascunho', variant: 'secondary' },
       aguardando_pagamento: { label: 'Aguardando', variant: 'outline' },
-      pago: { label: 'Pago', variant: 'default' },
+      pago: { label: 'Pago ✅', variant: 'default' },
       cancelado: { label: 'Cancelado', variant: 'destructive' },
     };
     const info = map[s] || { label: s, variant: 'secondary' as const };
     return <Badge variant={info.variant}>{info.label}</Badge>;
   };
 
+  const meioPagamentoLabel = (m: string | null) => {
+    const labels: Record<string, string> = { pix: '💠 Pix', dinheiro: '💵 Dinheiro', credito: '💳 Crédito', debito: '💳 Débito' };
+    return labels[m || ''] || m || '—';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Pedidos & Pix</h2>
-          <p className="text-muted-foreground text-sm mt-1">Crie pedidos e gere cobranças Pix</p>
+          <h2 className="text-2xl font-bold">Pedidos & Pagamentos</h2>
+          <p className="text-muted-foreground text-sm mt-1">Crie pedidos e gere cobranças</p>
         </div>
         <Button onClick={() => setShowForm(true)} className="gap-2">
           <ShoppingCart className="w-4 h-4" />
@@ -334,8 +392,8 @@ export default function PedidosPixTab() {
                 <TableHead>Código</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Peça</TableHead>
-                <TableHead>Qtd</TableHead>
                 <TableHead>Total</TableHead>
+                <TableHead>Pagamento</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
@@ -350,8 +408,8 @@ export default function PedidosPixTab() {
                   <TableCell className="font-mono text-xs">{p.codigo_pedido}</TableCell>
                   <TableCell>{p.nome_cliente}</TableCell>
                   <TableCell>{p.nome_peca}</TableCell>
-                  <TableCell>{p.quantidade}</TableCell>
                   <TableCell className="font-semibold">{formatCurrency(p.valor_total)}</TableCell>
+                  <TableCell className="text-xs">{meioPagamentoLabel(p.meio_pagamento)}</TableCell>
                   <TableCell>{statusBadge(p.status_pedido)}</TableCell>
                   <TableCell className="text-right">
                     <Button size="sm" variant="ghost" onClick={() => openDetail(p)} className="gap-1">
@@ -367,7 +425,7 @@ export default function PedidosPixTab() {
 
       {/* New Order Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Novo Pedido</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
@@ -412,22 +470,79 @@ export default function PedidosPixTab() {
               <Label>E-mail (opcional)</Label>
               <Input type="email" value={emailCliente} onChange={(e) => setEmailCliente(e.target.value)} placeholder="cliente@email.com" />
             </div>
-            <div className="flex flex-col gap-2">
-              <Button onClick={() => createOrder(false)} variant="secondary" disabled={savingOrder}>
-                Salvar pedido (sem Pix)
-              </Button>
-              <Button onClick={() => createOrder(true)} disabled={savingOrder} className="gap-2">
-                <QrCode className="w-4 h-4" />
-                {savingOrder ? 'Criando...' : 'Salvar pedido e gerar Pix'}
-              </Button>
+
+            {/* Payment Method */}
+            <div>
+              <Label className="mb-2 block">Forma de pagamento</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: 'pix' as MetodoPagamento, label: 'Pix', icon: QrCode },
+                  { value: 'dinheiro' as MetodoPagamento, label: 'Dinheiro', icon: Banknote },
+                  { value: 'credito' as MetodoPagamento, label: 'Crédito', icon: CreditCard },
+                  { value: 'debito' as MetodoPagamento, label: 'Débito', icon: CreditCard },
+                ]).map(({ value, label, icon: Icon }) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={metodoPagamento === value ? 'default' : 'outline'}
+                    className="gap-2 justify-start"
+                    onClick={() => { setMetodoPagamento(value); setPrecisaTroco(false); setValorRecebido(0); }}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
             </div>
+
+            {/* Cash: change calculation */}
+            {metodoPagamento === 'dinheiro' && (
+              <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm">Precisa de troco?</Label>
+                  <Switch checked={precisaTroco} onCheckedChange={setPrecisaTroco} />
+                </div>
+                {precisaTroco && (
+                  <>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Valor recebido (R$)</Label>
+                      <Input
+                        type="number"
+                        min={valorTotal}
+                        step="0.01"
+                        value={valorRecebido || ''}
+                        onChange={(e) => setValorRecebido(parseFloat(e.target.value) || 0)}
+                        placeholder="Ex: 100.00"
+                      />
+                    </div>
+                    {valorRecebido > 0 && (
+                      <div className="bg-primary/10 rounded-lg p-2 text-center">
+                        <p className="text-xs text-muted-foreground">Troco</p>
+                        <p className="text-xl font-bold text-primary">{formatCurrency(valorTroco)}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            <Button onClick={createOrder} disabled={savingOrder} className="w-full gap-2">
+              {metodoPagamento === 'pix' && <QrCode className="w-4 h-4" />}
+              {metodoPagamento === 'dinheiro' && <Banknote className="w-4 h-4" />}
+              {(metodoPagamento === 'credito' || metodoPagamento === 'debito') && <CreditCard className="w-4 h-4" />}
+              {savingOrder ? 'Criando pedido...' : (
+                metodoPagamento === 'pix' ? 'Criar pedido e gerar Pix' :
+                metodoPagamento === 'dinheiro' ? 'Criar pedido (Dinheiro)' :
+                'Criar pedido e gerar link de pagamento'
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Order Detail Dialog */}
       <Dialog open={!!detailPedido} onOpenChange={(o) => !o && setDetailPedido(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Detalhes do Pedido</DialogTitle></DialogHeader>
           {detailPedido && (
             <div className="space-y-4">
@@ -437,12 +552,12 @@ export default function PedidosPixTab() {
                 <div><span className="text-muted-foreground">Cliente:</span> {detailPedido.nome_cliente}</div>
                 <div><span className="text-muted-foreground">WhatsApp:</span> {detailPedido.whatsapp_cliente}</div>
                 <div><span className="text-muted-foreground">Peça:</span> {detailPedido.nome_peca}</div>
-                <div><span className="text-muted-foreground">Quantidade:</span> {detailPedido.quantidade}</div>
+                <div><span className="text-muted-foreground">Pagamento:</span> {meioPagamentoLabel(detailPedido.meio_pagamento)}</div>
                 <div className="col-span-2"><span className="text-muted-foreground">Valor total:</span> <span className="text-lg font-bold text-primary">{formatCurrency(detailPedido.valor_total)}</span></div>
               </div>
 
               {/* Pix section */}
-              {pixData ? (
+              {pixData && pixData.tipo === 'pix' && (
                 <Card className="border-primary/20">
                   <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><QrCode className="w-4 h-4" /> Pagamento Pix</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
@@ -462,12 +577,55 @@ export default function PedidosPixTab() {
                     )}
                     <div className="flex items-center gap-2">
                       <Badge variant={pixData.status === 'pago' ? 'default' : 'outline'}>{pixData.status}</Badge>
-                      <Button size="sm" variant="ghost" onClick={updatePixStatus} disabled={checkingStatus} className="gap-1"><RefreshCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} /> {checkingStatus ? 'Consultando...' : 'Atualizar status'}</Button>
+                      <Button size="sm" variant="ghost" onClick={updatePixStatus} disabled={checkingStatus} className="gap-1">
+                        <RefreshCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} />
+                        {checkingStatus ? 'Consultando...' : 'Atualizar status'}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma cobrança Pix gerada para este pedido.</p>
+              )}
+
+              {/* Card payment link section */}
+              {pixData && pixData.tipo === 'cartao' && (
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><CreditCard className="w-4 h-4" /> Link de Pagamento</CardTitle></CardHeader>
+                  <CardContent className="space-y-3">
+                    {pixData.link_pagamento && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Link de pagamento</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input value={pixData.link_pagamento} readOnly className="text-xs font-mono" />
+                          <Button size="icon" variant="outline" onClick={copyPaymentLink}><Copy className="w-4 h-4" /></Button>
+                        </div>
+                        <Button size="sm" variant="outline" className="gap-1 mt-2 w-full" onClick={() => window.open(pixData.link_pagamento!, '_blank')}>
+                          <Link2 className="w-3 h-3" /> Abrir link de pagamento
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Badge variant={pixData.status === 'pago' ? 'default' : 'outline'}>{pixData.status}</Badge>
+                      <Button size="sm" variant="ghost" onClick={updatePixStatus} disabled={checkingStatus} className="gap-1">
+                        <RefreshCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} />
+                        {checkingStatus ? 'Consultando...' : 'Atualizar status'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Cash section */}
+              {detailPedido.meio_pagamento === 'dinheiro' && (
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Banknote className="w-4 h-4" /> Pagamento em Dinheiro</CardTitle></CardHeader>
+                  <CardContent>
+                    <Badge variant="default">Pago ✅</Badge>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!pixData && detailPedido.meio_pagamento !== 'dinheiro' && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma cobrança gerada para este pedido.</p>
               )}
 
               {/* WhatsApp actions */}

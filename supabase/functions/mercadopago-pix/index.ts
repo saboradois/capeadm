@@ -31,7 +31,6 @@ serve(async (req) => {
       if (body.type === 'payment' && body.data?.id) {
         const paymentId = String(body.data.id);
 
-        // Fetch payment details from Mercado Pago
         const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
           headers: { 'Authorization': `Bearer ${MERCADOPAGO_ACCESS_TOKEN}` },
         });
@@ -39,7 +38,6 @@ serve(async (req) => {
         console.log('Payment status from MP:', mpData.status, 'for payment:', paymentId);
 
         if (mpData.status === 'approved') {
-          // Update transacoes_pix
           const { data: txData } = await supabase
             .from('transacoes_pix')
             .update({ status: 'pago' })
@@ -48,7 +46,6 @@ serve(async (req) => {
             .single();
 
           if (txData?.pedido_id) {
-            // Update pedido status
             await supabase
               .from('pedidos')
               .update({ status_pedido: 'pago' })
@@ -69,6 +66,32 @@ serve(async (req) => {
               .update({ status_pedido: 'cancelado' })
               .eq('id', txData.pedido_id);
           }
+        }
+      }
+
+      // Handle merchant_order webhook (from checkout preferences)
+      if (body.type === 'merchant_order' && body.data?.id) {
+        const orderId = String(body.data.id);
+        const moRes = await fetch(`https://api.mercadopago.com/merchant_orders/${orderId}`, {
+          headers: { 'Authorization': `Bearer ${MERCADOPAGO_ACCESS_TOKEN}` },
+        });
+        const moData = await moRes.json();
+        console.log('Merchant order status:', moData.order_status, 'for order:', orderId);
+
+        if (moData.order_status === 'paid' && moData.external_reference) {
+          // external_reference is the pedido_id
+          await supabase
+            .from('transacoes_pix')
+            .update({ status: 'pago' })
+            .eq('pedido_id', moData.external_reference)
+            .eq('tipo', 'cartao');
+
+          await supabase
+            .from('pedidos')
+            .update({ status_pedido: 'pago' })
+            .eq('id', moData.external_reference);
+
+          console.log('Pedido cartão atualizado para pago:', moData.external_reference);
         }
       }
 
@@ -100,7 +123,6 @@ serve(async (req) => {
       if (mpData.status === 'approved') newStatus = 'pago';
       else if (mpData.status === 'rejected' || mpData.status === 'cancelled') newStatus = 'cancelado';
 
-      // Update in DB
       if (newStatus !== 'pendente') {
         const { data: txData } = await supabase
           .from('transacoes_pix')
@@ -124,6 +146,79 @@ serve(async (req) => {
       });
     }
 
+    // Handle card payment link creation
+    if (body.action === 'create_card_link') {
+      const { pedido_id, valor, descricao, nome_cliente, user_id } = body;
+
+      if (!pedido_id || !valor) {
+        return new Response(JSON.stringify({ error: 'pedido_id e valor são obrigatórios' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-pix?source=webhook`;
+
+      const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: [{
+            title: descricao || `Pedido ${pedido_id}`,
+            quantity: 1,
+            unit_price: Number(valor),
+            currency_id: 'BRL',
+          }],
+          payer: {
+            name: nome_cliente || 'Cliente',
+          },
+          payment_methods: {
+            excluded_payment_types: [{ id: 'ticket' }],
+          },
+          external_reference: pedido_id,
+          notification_url: webhookUrl,
+          back_urls: {
+            success: 'https://capeadm.lovable.app',
+            failure: 'https://capeadm.lovable.app',
+            pending: 'https://capeadm.lovable.app',
+          },
+          auto_return: 'approved',
+        }),
+      });
+
+      const prefData = await prefResponse.json();
+
+      if (!prefResponse.ok) {
+        console.error('Mercado Pago preference error:', JSON.stringify(prefData));
+        throw new Error(`Erro Mercado Pago [${prefResponse.status}]: ${prefData.message || JSON.stringify(prefData)}`);
+      }
+
+      // Save to transacoes_pix
+      await supabase.from('transacoes_pix').insert({
+        pedido_id,
+        valor: Number(valor),
+        id_mercadopago: String(prefData.id),
+        status: 'pendente',
+        tipo: 'cartao',
+        link_pagamento: prefData.init_point,
+        user_id: user_id || null,
+      });
+
+      await supabase.from('pedidos').update({ status_pedido: 'aguardando_pagamento' }).eq('id', pedido_id);
+
+      return new Response(JSON.stringify({
+        success: true,
+        link_pagamento: prefData.init_point,
+        id_mercadopago: prefData.id,
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Handle normal Pix creation request
     const { pedido_id, valor, descricao, email_cliente, nome_cliente, user_id } = body;
 
@@ -134,10 +229,8 @@ serve(async (req) => {
       });
     }
 
-    // Build webhook URL
     const webhookUrl = `${supabaseUrl}/functions/v1/mercadopago-pix?source=webhook`;
 
-    // Create Pix payment via Mercado Pago API
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
@@ -168,12 +261,12 @@ serve(async (req) => {
     const qrCodeBase64 = pixInfo?.qr_code_base64 || null;
     const pixText = pixInfo?.qr_code || null;
 
-    // Save to transacoes_pix
     const { error: insertError } = await supabase.from('transacoes_pix').insert({
       pedido_id,
       valor: Number(valor),
       id_mercadopago: String(mpData.id),
       status: 'pendente',
+      tipo: 'pix',
       qr_code_base64: qrCodeBase64,
       pix_text: pixText,
       user_id: user_id || null,
@@ -184,7 +277,6 @@ serve(async (req) => {
       throw new Error('Erro ao salvar transação Pix: ' + insertError.message);
     }
 
-    // Update order status
     await supabase.from('pedidos').update({ status_pedido: 'aguardando_pagamento' }).eq('id', pedido_id);
 
     return new Response(JSON.stringify({
