@@ -225,7 +225,18 @@ export default function MinhasPecasTab() {
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma peça encontrada</TableCell></TableRow>
               ) : filtered.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.nome_peca}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {p.foto_url ? (
+                        <img src={p.foto_url} alt={p.nome_peca} className="w-8 h-8 rounded-md object-cover shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0">
+                          <Camera className="w-3 h-3 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="font-medium">{p.nome_peca}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{formatCurrency(p.custo_total_peca)}</TableCell>
                   <TableCell className="font-semibold text-primary">{formatCurrency(p.preco_final)}</TableCell>
                   <TableCell className="text-success">{formatCurrency(p.lucro_estimado)}</TableCell>
