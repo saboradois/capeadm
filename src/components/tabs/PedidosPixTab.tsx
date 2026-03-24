@@ -84,6 +84,41 @@ export default function PedidosPixTab() {
 
   useEffect(() => { fetchData(); }, []);
 
+  // Realtime subscription for payment updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('pedidos-status')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'pedidos',
+        },
+        (payload) => {
+          const updated = payload.new as any;
+          const old = payload.old as any;
+          
+          if (old.status_pedido !== 'pago' && updated.status_pedido === 'pago') {
+            toast.success(
+              `🎉 Pagamento confirmado!\nPedido ${updated.codigo_pedido} — ${updated.nome_peca} foi pago!`,
+              { duration: 10000 }
+            );
+          }
+
+          // Update local state
+          setPedidos((prev) =>
+            prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const generateOrderCode = () => {
     const num = pedidos.length + 1;
     return `PED-${String(num).padStart(4, '0')}`;
