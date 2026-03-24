@@ -74,7 +74,7 @@ export default function PedidosPixTab() {
   const fetchData = async () => {
     setLoading(true);
     const [prodRes, pedRes] = await Promise.all([
-      supabase.from('produtos_semijoias').select('id, nome_peca, preco_final, meio_cobranca, tipo_pagamento, numero_parcelas').order('nome_peca'),
+      supabase.from('produtos_semijoias').select('id, nome_peca, preco_final, meio_cobranca, tipo_pagamento, numero_parcelas, foto_url').order('nome_peca'),
       supabase.from('pedidos').select('*').order('created_at', { ascending: false }),
     ]);
     if (prodRes.data) setProdutos(prodRes.data);
