@@ -74,6 +74,7 @@ export default function MinhasPecasTab() {
   const openEdit = (p: Produto) => {
     setEditProduto(p);
     setManualPreco(p.preco_final);
+    setEditFotoUrl(p.foto_url || null);
     setEditForm({
       nome_peca: p.nome_peca,
       custo_peca: p.custo_peca,
@@ -86,6 +87,36 @@ export default function MinhasPecasTab() {
       valor_verniz: 0,
       quantidade_pecas_por_verniz: 1,
     });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editProduto) return;
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Não autenticado');
+      const ext = file.name.split('.').pop();
+      const path = `${user.id}/${editProduto.id}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('produto-fotos').upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('produto-fotos').getPublicUrl(path);
+      const fotoUrl = urlData.publicUrl + '?t=' + Date.now();
+      await supabase.from('produtos_semijoias').update({ foto_url: fotoUrl }).eq('id', editProduto.id);
+      setEditFotoUrl(fotoUrl);
+      toast.success('Foto atualizada!');
+    } catch (err: any) {
+      toast.error('Erro ao enviar foto: ' + err.message);
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePhoto = async () => {
+    if (!editProduto) return;
+    await supabase.from('produtos_semijoias').update({ foto_url: null }).eq('id', editProduto.id);
+    setEditFotoUrl(null);
+    toast.success('Foto removida');
   };
 
   const handleEditSave = async () => {
