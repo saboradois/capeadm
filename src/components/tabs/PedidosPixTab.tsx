@@ -131,36 +131,17 @@ export default function PedidosPixTab() {
 
   const generatePix = async (pedido: Pedido) => {
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const url = projectId
-        ? `https://${projectId}.supabase.co/functions/v1/mercadopago-pix`
-        : '';
-
-      if (!url) {
-        // Fallback: save pix record without actual API call
-        await supabase.from('transacoes_pix').insert({
-          pedido_id: pedido.id,
-          valor: pedido.valor_total,
-          status: 'pendente',
-          pix_text: `PIX-SIMULADO-${pedido.codigo_pedido}`,
-        });
-        toast.success(`Pedido ${pedido.codigo_pedido} criado! (Pix simulado - configure a API do Mercado Pago)`);
-        return;
-      }
-
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('mercadopago-pix', {
+        body: {
           pedido_id: pedido.id,
           valor: pedido.valor_total,
           descricao: `Pedido ${pedido.codigo_pedido} - ${pedido.nome_peca}`,
           email_cliente: pedido.email_cliente || undefined,
           nome_cliente: pedido.nome_cliente,
-        }),
+        },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro na API Pix');
+      if (error) throw new Error(error.message || 'Erro na API Pix');
+      if (data?.error) throw new Error(data.error);
       toast.success(`Pedido ${pedido.codigo_pedido} criado com Pix!`);
     } catch (err: any) {
       toast.error('Pedido criado, mas erro ao gerar Pix: ' + err.message);

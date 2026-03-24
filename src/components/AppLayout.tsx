@@ -33,8 +33,8 @@ export default function AppLayout() {
               <Gem className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold leading-tight">Essenza</h1>
-              <p className="text-xs text-muted-foreground">Vendas & Precificação</p>
+              <h1 className="text-xl font-semibold leading-tight">CAPE</h1>
+              <p className="text-xs text-muted-foreground">Sistema de Administração</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
