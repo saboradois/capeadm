@@ -21,7 +21,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { pedido_id, valor, descricao, email_cliente, nome_cliente } = await req.json();
+    const { pedido_id, valor, descricao, email_cliente, nome_cliente, user_id } = await req.json();
 
     if (!pedido_id || !valor) {
       return new Response(JSON.stringify({ error: 'pedido_id e valor são obrigatórios' }), {
@@ -68,6 +68,7 @@ serve(async (req) => {
       status: 'pendente',
       qr_code_base64: qrCodeBase64,
       pix_text: pixText,
+      user_id: user_id || null,
     });
 
     if (insertError) {

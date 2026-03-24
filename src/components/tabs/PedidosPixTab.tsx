@@ -131,6 +131,7 @@ export default function PedidosPixTab() {
 
   const generatePix = async (pedido: Pedido) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('mercadopago-pix', {
         body: {
           pedido_id: pedido.id,
@@ -138,6 +139,7 @@ export default function PedidosPixTab() {
           descricao: `Pedido ${pedido.codigo_pedido} - ${pedido.nome_peca}`,
           email_cliente: pedido.email_cliente || undefined,
           nome_cliente: pedido.nome_cliente,
+          user_id: user?.id,
         },
       });
       if (error) throw new Error(error.message || 'Erro na API Pix');
