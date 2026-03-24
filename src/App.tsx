@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import PWAInstallPrompt from "./components/PWAInstallPrompt.tsx";
 
 const queryClient = new QueryClient();
 
