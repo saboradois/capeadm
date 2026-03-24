@@ -462,7 +462,7 @@ export default function PedidosPixTab() {
                     )}
                     <div className="flex items-center gap-2">
                       <Badge variant={pixData.status === 'pago' ? 'default' : 'outline'}>{pixData.status}</Badge>
-                      <Button size="sm" variant="ghost" onClick={updatePixStatus} className="gap-1"><RefreshCw className="w-3 h-3" /> Atualizar status</Button>
+                      <Button size="sm" variant="ghost" onClick={updatePixStatus} disabled={checkingStatus} className="gap-1"><RefreshCw className={`w-3 h-3 ${checkingStatus ? 'animate-spin' : ''}`} /> {checkingStatus ? 'Consultando...' : 'Atualizar status'}</Button>
                     </div>
                   </CardContent>
                 </Card>
