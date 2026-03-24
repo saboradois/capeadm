@@ -68,8 +68,8 @@ export default function Auth() {
               <Gem className="w-7 h-7 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Essenza</CardTitle>
-          <p className="text-sm text-muted-foreground">Vendas & Precificação</p>
+          <CardTitle className="text-2xl">CAPE</CardTitle>
+          <p className="text-sm text-muted-foreground">Sistema de Administração</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
