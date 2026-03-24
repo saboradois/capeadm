@@ -402,6 +402,7 @@ export default function PedidosPixTab() {
             <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos status</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
               <SelectItem value="rascunho">Rascunho</SelectItem>
               <SelectItem value="aguardando_pagamento">Aguardando</SelectItem>
               <SelectItem value="pago">Pago</SelectItem>
