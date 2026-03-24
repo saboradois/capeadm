@@ -137,9 +137,35 @@ export default function PedidosPixTab() {
     }
     setSavingOrder(true);
     const codigoPedido = generateOrderCode();
-    
-    const isPaid = metodoPagamento === 'dinheiro';
-    const statusPedido = isPaid ? 'pago' : 'aguardando_pagamento';
+
+    // Save or find client
+    const whatsappClean = whatsappCliente.replace(/\D/g, '');
+    let clienteId: string | null = null;
+    try {
+      const { data: existingCliente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('whatsapp', whatsappClean)
+        .maybeSingle();
+
+      if (existingCliente) {
+        clienteId = existingCliente.id;
+        // Update name/email if changed
+        await supabase.from('clientes').update({
+          nome: nomeCliente,
+          email: emailCliente || null,
+        }).eq('id', existingCliente.id);
+      } else {
+        const { data: newCliente } = await supabase.from('clientes').insert({
+          nome: nomeCliente,
+          whatsapp: whatsappClean,
+          email: emailCliente || null,
+        }).select('id').single();
+        if (newCliente) clienteId = newCliente.id;
+      }
+    } catch (err) {
+      console.error('Erro ao salvar cliente:', err);
+    }
 
     const { data: pedido, error } = await supabase.from('pedidos').insert({
       codigo_pedido: codigoPedido,
