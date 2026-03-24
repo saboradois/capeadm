@@ -366,6 +366,7 @@ export default function PedidosPixTab() {
 
   const statusBadge = (s: string) => {
     const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+      pendente: { label: 'Pendente', variant: 'outline' },
       rascunho: { label: 'Rascunho', variant: 'secondary' },
       aguardando_pagamento: { label: 'Aguardando', variant: 'outline' },
       pago: { label: 'Pago ✅', variant: 'default' },
