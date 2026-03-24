@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { Calculator, Gem, ShoppingCart, BarChart3 } from 'lucide-react';
+import { Calculator, Gem, ShoppingCart, BarChart3, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import CalculadoraTab from './tabs/CalculadoraTab';
 import MinhasPecasTab from './tabs/MinhasPecasTab';
 import PedidosPixTab from './tabs/PedidosPixTab';
 import RelatorioTab from './tabs/RelatorioTab';
+import NomeadorIATab from './tabs/NomeadorIATab';
 
 const tabs = [
   { id: 'calculadora', label: 'Calculadora', icon: Calculator },
-  { id: 'pecas', label: 'Minhas Peças', icon: Gem },
-  { id: 'pedidos', label: 'Pedidos & Pix', icon: ShoppingCart },
+  { id: 'pecas', label: 'Peças', icon: Gem },
+  { id: 'pedidos', label: 'Pedidos', icon: ShoppingCart },
+  { id: 'ia', label: 'IA', icon: Sparkles },
   { id: 'relatorio', label: 'Relatório', icon: BarChart3 },
 ] as const;
 
