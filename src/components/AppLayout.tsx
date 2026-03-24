@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Calculator, Gem, ShoppingCart, BarChart3, Sparkles } from 'lucide-react';
+import { Calculator, Gem, ShoppingCart, BarChart3, Sparkles, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 import CalculadoraTab from './tabs/CalculadoraTab';
 import MinhasPecasTab from './tabs/MinhasPecasTab';
 import PedidosPixTab from './tabs/PedidosPixTab';
@@ -20,10 +22,10 @@ type TabId = (typeof tabs)[number]['id'];
 
 export default function AppLayout() {
   const [activeTab, setActiveTab] = useState<TabId>('calculadora');
+  const { signOut } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -35,10 +37,12 @@ export default function AppLayout() {
               <p className="text-xs text-muted-foreground">Vendas & Precificação</p>
             </div>
           </div>
+          <Button variant="ghost" size="icon" onClick={signOut} title="Sair">
+            <LogOut className="w-5 h-5" />
+          </Button>
         </div>
       </header>
 
-      {/* Content */}
       <main className="flex-1 container mx-auto px-4 py-6">
         <AnimatePresence mode="wait">
           <motion.div
@@ -57,7 +61,6 @@ export default function AppLayout() {
         </AnimatePresence>
       </main>
 
-      {/* Bottom Navigation */}
       <nav className="border-t bg-card/90 backdrop-blur-sm sticky bottom-0 z-50">
         <div className="container mx-auto flex">
           {tabs.map((tab) => {
