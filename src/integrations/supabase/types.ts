@@ -14,8 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      clientes: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          nome: string
+          updated_at: string
+          user_id: string | null
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+          user_id?: string | null
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+          user_id?: string | null
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       pedidos: {
         Row: {
+          cliente_id: string | null
           codigo_pedido: string
           created_at: string
           email_cliente: string | null
@@ -36,6 +67,7 @@ export type Database = {
           whatsapp_cliente: string
         }
         Insert: {
+          cliente_id?: string | null
           codigo_pedido: string
           created_at?: string
           email_cliente?: string | null
@@ -56,6 +88,7 @@ export type Database = {
           whatsapp_cliente: string
         }
         Update: {
+          cliente_id?: string | null
           codigo_pedido?: string
           created_at?: string
           email_cliente?: string | null
@@ -76,6 +109,13 @@ export type Database = {
           whatsapp_cliente?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "pedidos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pedidos_produto_id_fkey"
             columns: ["produto_id"]
