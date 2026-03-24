@@ -19,6 +19,7 @@ interface Produto {
   meio_cobranca: string;
   tipo_pagamento: string;
   numero_parcelas: number | null;
+  foto_url: string | null;
 }
 
 interface Pedido {
