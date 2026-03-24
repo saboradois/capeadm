@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { NumberInput } from '@/components/ui/number-input';
 import { Pencil, Trash2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, formatPercent, calcularPreco } from '@/lib/pricing';
@@ -38,6 +38,7 @@ export default function MinhasPecasTab() {
   const [filterTipo, setFilterTipo] = useState('todos');
   const [editProduto, setEditProduto] = useState<Produto | null>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [manualPreco, setManualPreco] = useState<number>(0);
 
   const fetchProdutos = async () => {
     setLoading(true);
@@ -68,6 +69,7 @@ export default function MinhasPecasTab() {
 
   const openEdit = (p: Produto) => {
     setEditProduto(p);
+    setManualPreco(p.preco_final);
     setEditForm({
       nome_peca: p.nome_peca,
       custo_peca: p.custo_peca,
@@ -102,7 +104,29 @@ export default function MinhasPecasTab() {
       margem_real: result.margem_real,
     }).eq('id', editProduto.id);
     if (error) toast.error(error.message);
-    else { toast.success('Peça atualizada!'); setEditProduto(null); fetchProdutos(); }
+    else { toast.success('Peça recalculada e salva!'); setEditProduto(null); fetchProdutos(); }
+  };
+
+  const handleManualPriceSave = async () => {
+    if (!editProduto) return;
+    if (manualPreco <= 0) {
+      toast.error('Informe um preço válido');
+      return;
+    }
+    const custoTotal = editProduto.custo_total_peca;
+    const taxaCartao = editProduto.taxa_cartao;
+    const valorTaxas = manualPreco * taxaCartao;
+    const lucro = manualPreco - custoTotal - valorTaxas;
+    const margem = manualPreco > 0 ? (lucro / manualPreco) * 100 : 0;
+
+    const { error } = await supabase.from('produtos_semijoias').update({
+      nome_peca: editForm.nome_peca,
+      preco_final: manualPreco,
+      lucro_estimado: Math.round(lucro * 100) / 100,
+      margem_real: Math.round(margem * 100) / 100,
+    }).eq('id', editProduto.id);
+    if (error) toast.error(error.message);
+    else { toast.success('Preço atualizado manualmente!'); setEditProduto(null); fetchProdutos(); }
   };
 
   const meioLabel = (m: string) => m === 'tap_to_pay_nubank' ? 'Nubank' : 'Minizinha';
@@ -119,7 +143,6 @@ export default function MinhasPecasTab() {
         <p className="text-muted-foreground text-sm mt-1">Gerencie suas semijoias cadastradas</p>
       </div>
 
-      {/* Filters */}
       <Card className="glass-card">
         <CardContent className="pt-4 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -146,7 +169,6 @@ export default function MinhasPecasTab() {
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card className="glass-card overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
@@ -187,13 +209,40 @@ export default function MinhasPecasTab() {
         </div>
       </Card>
 
-      {/* Edit Dialog */}
       <Dialog open={!!editProduto} onOpenChange={(o) => !o && setEditProduto(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Editar Peça</DialogTitle></DialogHeader>
           {editProduto && (
             <div className="space-y-4">
               <div><Label>Nome</Label><Input value={editForm.nome_peca} onChange={(e) => setEditForm({ ...editForm, nome_peca: e.target.value })} /></div>
+
+              {/* Manual price edit */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="pt-4 space-y-3">
+                  <Label className="text-sm font-semibold">Preço final (edição manual)</Label>
+                  <div className="flex gap-2">
+                    <NumberInput
+                      decimal
+                      step={0.01}
+                      min={0}
+                      value={manualPreco}
+                      onValueChange={setManualPreco}
+                      className="flex-1"
+                      placeholder="R$ 0,00"
+                    />
+                    <Button onClick={handleManualPriceSave} variant="default" size="sm">
+                      Salvar preço
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Altere diretamente o valor de venda sem recalcular</p>
+                </CardContent>
+              </Card>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-xs"><span className="bg-background px-2 text-muted-foreground">ou recalcular</span></div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div><Label>Custo (R$)</Label><NumberInput decimal step={0.01} value={editForm.custo_peca} onValueChange={(v) => setEditForm({ ...editForm, custo_peca: v })} /></div>
                 <div><Label>Multiplicador</Label><NumberInput decimal step={0.1} min={1} value={editForm.multiplicador_lucro} onValueChange={(v) => setEditForm({ ...editForm, multiplicador_lucro: v })} /></div>
