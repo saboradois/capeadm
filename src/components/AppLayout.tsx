@@ -15,6 +15,7 @@ const tabs = [
   { id: 'calculadora', label: 'Calculadora', icon: Calculator },
   { id: 'pecas', label: 'Peças', icon: Gem },
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingCart },
+  { id: 'clientes', label: 'Clientes', icon: Users },
   { id: 'ia', label: 'IA', icon: Sparkles },
   { id: 'relatorio', label: 'Relatório', icon: BarChart3 },
 ] as const;
