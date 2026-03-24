@@ -171,16 +171,31 @@ export default function PedidosPixTab() {
     }
   };
 
+  const buildWhatsAppMessage = () => {
+    if (!detailPedido) return '';
+    const hour = new Date().getHours();
+    const saudacao = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+    const agradecimentos = [
+      'Agradecemos pela sua compra e confiança! 💖',
+      'Obrigada por escolher a CAPE! Você merece brilhar! ✨',
+      'Ficamos muito felizes com seu pedido! 💕',
+      'Sua escolha foi incrível! Obrigada pela preferência! 🌟',
+      'É uma alegria atender você! Muito obrigada! 💎',
+    ];
+    const agradecimento = agradecimentos[Math.floor(Math.random() * agradecimentos.length)];
+    return `${saudacao}, ${detailPedido.nome_cliente}! 😊\nAqui é da *CAPE Bijuterias Finas e Semijoias*.\n\n📋 *Pedido nº ${detailPedido.codigo_pedido}*\n\n🛍️ *Itens do pedido:*\n• ${detailPedido.nome_peca} — ${detailPedido.quantidade}x ${formatCurrency(detailPedido.valor_unitario)}\n\n💰 *Valor total: ${formatCurrency(detailPedido.valor_total)}*\n\n${agradecimento}\n\nSegue código Pix para realizar o pagamento 👇`;
+  };
+
   const copyWhatsAppMessage = () => {
-    if (!detailPedido) return;
-    const msg = `Oi ${detailPedido.nome_cliente}, tudo bem?\nAqui é da ${NOME_LOJA}.\n\nSeu pedido: ${detailPedido.codigo_pedido}\nPeça: ${detailPedido.nome_peca}\nQuantidade: ${detailPedido.quantidade}\nValor total: ${formatCurrency(detailPedido.valor_total)}\n\nPara pagar via Pix, copie e cole este código no seu app do banco:\n${pixData?.pix_text || '(Pix não gerado)'}\n\nAssim que o pagamento for confirmado, eu te aviso por aqui 💕`;
+    const msg = buildWhatsAppMessage();
+    if (!msg) return;
     navigator.clipboard.writeText(msg);
     toast.success('Mensagem copiada! Cole no WhatsApp.');
   };
 
   const openWhatsApp = () => {
     if (!detailPedido) return;
-    const msg = encodeURIComponent(`Oi ${detailPedido.nome_cliente}, tudo bem?\nAqui é da ${NOME_LOJA}.\n\nSeu pedido: ${detailPedido.codigo_pedido}\nPeça: ${detailPedido.nome_peca}\nQuantidade: ${detailPedido.quantidade}\nValor total: ${formatCurrency(detailPedido.valor_total)}\n\nPara pagar via Pix, copie e cole este código no seu app do banco:\n${pixData?.pix_text || '(Pix não gerado)'}\n\nAssim que o pagamento for confirmado, eu te aviso por aqui 💕`);
+    const msg = encodeURIComponent(buildWhatsAppMessage());
     const phone = detailPedido.whatsapp_cliente.replace(/\D/g, '');
     window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
   };
