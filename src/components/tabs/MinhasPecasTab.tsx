@@ -40,6 +40,9 @@ export default function MinhasPecasTab() {
   const [editProduto, setEditProduto] = useState<Produto | null>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [manualPreco, setManualPreco] = useState<number>(0);
+  const [uploading, setUploading] = useState(false);
+  const [editFotoUrl, setEditFotoUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchProdutos = async () => {
     setLoading(true);
