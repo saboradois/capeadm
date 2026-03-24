@@ -260,6 +260,27 @@ export default function MinhasPecasTab() {
           <DialogHeader><DialogTitle>Editar Peça</DialogTitle></DialogHeader>
           {editProduto && (
             <div className="space-y-4">
+              {/* Photo upload */}
+              <div className="flex flex-col items-center gap-2">
+                {editFotoUrl ? (
+                  <div className="relative">
+                    <img src={editFotoUrl} alt="Foto da peça" className="w-24 h-24 rounded-lg object-cover" />
+                    <button onClick={removePhoto} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                )}
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="gap-1">
+                  <Camera className="w-3 h-3" />
+                  {uploading ? 'Enviando...' : 'Adicionar foto'}
+                </Button>
+              </div>
+
               <div><Label>Nome</Label><Input value={editForm.nome_peca} onChange={(e) => setEditForm({ ...editForm, nome_peca: e.target.value })} /></div>
 
               {/* Manual price edit */}
