@@ -315,7 +315,16 @@ export default function PedidosPixTab() {
                 <SelectTrigger><SelectValue placeholder="Selecione uma peça..." /></SelectTrigger>
                 <SelectContent>
                   {produtos.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.nome_peca} — {formatCurrency(p.preco_final)}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex items-center gap-2">
+                        {p.foto_url ? (
+                          <img src={p.foto_url} alt={p.nome_peca} className="w-6 h-6 rounded object-cover shrink-0" />
+                        ) : (
+                          <div className="w-6 h-6 rounded bg-muted shrink-0" />
+                        )}
+                        <span>{p.nome_peca} — {formatCurrency(p.preco_final)}</span>
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
