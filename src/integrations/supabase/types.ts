@@ -29,6 +29,7 @@ export type Database = {
           status_pedido: string
           tipo_pagamento: string | null
           updated_at: string
+          user_id: string | null
           valor_total: number
           valor_unitario: number
           whatsapp_cliente: string
@@ -47,6 +48,7 @@ export type Database = {
           status_pedido?: string
           tipo_pagamento?: string | null
           updated_at?: string
+          user_id?: string | null
           valor_total?: number
           valor_unitario?: number
           whatsapp_cliente: string
@@ -65,6 +67,7 @@ export type Database = {
           status_pedido?: string
           tipo_pagamento?: string | null
           updated_at?: string
+          user_id?: string | null
           valor_total?: number
           valor_unitario?: number
           whatsapp_cliente?: string
@@ -98,6 +101,7 @@ export type Database = {
           taxa_cartao: number
           tipo_pagamento: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -117,6 +121,7 @@ export type Database = {
           taxa_cartao?: number
           tipo_pagamento?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -136,6 +141,7 @@ export type Database = {
           taxa_cartao?: number
           tipo_pagamento?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -149,6 +155,7 @@ export type Database = {
           qr_code_base64: string | null
           status: string
           updated_at: string
+          user_id: string | null
           valor: number
         }
         Insert: {
@@ -160,6 +167,7 @@ export type Database = {
           qr_code_base64?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           valor?: number
         }
         Update: {
@@ -171,6 +179,7 @@ export type Database = {
           qr_code_base64?: string | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           valor?: number
         }
         Relationships: [
