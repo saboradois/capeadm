@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Users, Eye, Search, ShoppingBag } from 'lucide-react';
+import { Users, Eye, Search, ShoppingBag, Trash2, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/pricing';
+import { toast } from 'sonner';
 
 interface Cliente {
   id: string;
@@ -36,6 +39,12 @@ export default function ClientesTab() {
   const [pedidos, setPedidos] = useState<PedidoHistorico[]>([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
 
+  // Edit state
+  const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
+  const [editNome, setEditNome] = useState('');
+  const [editWhatsapp, setEditWhatsapp] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+
   const fetchClientes = async () => {
     setLoading(true);
     const { data } = await supabase.from('clientes').select('*').order('nome');
@@ -57,6 +66,39 @@ export default function ClientesTab() {
     setLoadingPedidos(false);
   };
 
+  const openEdit = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setEditNome(cliente.nome);
+    setEditWhatsapp(cliente.whatsapp);
+    setEditEmail(cliente.email || '');
+  };
+
+  const saveEdit = async () => {
+    if (!editingCliente) return;
+    const { error } = await supabase.from('clientes').update({
+      nome: editNome,
+      whatsapp: editWhatsapp.replace(/\D/g, ''),
+      email: editEmail || null,
+    }).eq('id', editingCliente.id);
+    if (error) {
+      toast.error('Erro ao salvar: ' + error.message);
+    } else {
+      toast.success('Cliente atualizado!');
+      setEditingCliente(null);
+      fetchClientes();
+    }
+  };
+
+  const deleteCliente = async (id: string) => {
+    const { error } = await supabase.from('clientes').delete().eq('id', id);
+    if (error) {
+      toast.error('Erro ao excluir: ' + error.message);
+    } else {
+      toast.success('Cliente excluído!');
+      fetchClientes();
+    }
+  };
+
   const filteredClientes = clientes.filter((c) => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -73,6 +115,7 @@ export default function ClientesTab() {
       aguardando_pagamento: { label: 'Aguardando', variant: 'outline' },
       pago: { label: 'Pago ✅', variant: 'default' },
       cancelado: { label: 'Cancelado', variant: 'destructive' },
+      pendente: { label: 'Pendente', variant: 'outline' },
     };
     const info = map[s] || { label: s, variant: 'secondary' as const };
     return <Badge variant={info.variant}>{info.label}</Badge>;
@@ -118,7 +161,7 @@ export default function ClientesTab() {
                 <TableHead>WhatsApp</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Desde</TableHead>
-                <TableHead className="text-right">Ação</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -133,9 +176,33 @@ export default function ClientesTab() {
                   <TableCell className="text-xs text-muted-foreground">{c.email || '—'}</TableCell>
                   <TableCell className="text-xs">{formatDate(c.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    <Button size="sm" variant="ghost" onClick={() => openHistorico(c)} className="gap-1">
-                      <Eye className="w-4 h-4" /> Histórico
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => openHistorico(c)} className="gap-1">
+                        <Eye className="w-4 h-4" /> Histórico
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(c)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir <strong>{c.nome}</strong>? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteCliente(c.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Excluir</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -143,6 +210,30 @@ export default function ClientesTab() {
           </Table>
         </div>
       </Card>
+
+      {/* Edit Client Dialog */}
+      <Dialog open={!!editingCliente} onOpenChange={(o) => !o && setEditingCliente(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome</Label>
+              <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+            </div>
+            <div>
+              <Label>WhatsApp</Label>
+              <Input value={editWhatsapp} onChange={(e) => setEditWhatsapp(e.target.value)} />
+            </div>
+            <div>
+              <Label>E-mail</Label>
+              <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+            </div>
+            <Button onClick={saveEdit} className="w-full">Salvar alterações</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Client History Dialog */}
       <Dialog open={!!selectedCliente} onOpenChange={(o) => !o && setSelectedCliente(null)}>

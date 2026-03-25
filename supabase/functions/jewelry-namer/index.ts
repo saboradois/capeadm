@@ -35,13 +35,18 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Você é uma especialista em design de joias de luxo, com profundo conhecimento em semijoias, bijuterias finas e alta joalheria. Ao analisar a foto de uma peça, você identifica:
-- O tipo de peça (brinco, colar, anel, pulseira, etc.)
-- Materiais aparentes (cristais, pérolas, pedras, banho de ouro, etc.)
-- Estilo do design (clássico, moderno, boho, minimalista, etc.)
-- Detalhes distintivos (formas, texturas, acabamentos)
+            content: `Você é um renomado designer de joias internacional com mais de 20 anos de experiência no mercado de alta joalheria e semijoias de luxo. Você já trabalhou com as maiores marcas do mundo como Vivara, Pandora, Tiffany & Co., Cartier e Bvlgari. Seu talento especial é criar nomes que transmitem sofisticação, exclusividade e desejo.
 
-Com base nisso, você cria nomes elegantes, sofisticados e comercialmente atrativos para a peça. Os nomes devem ser curtos (2-4 palavras), em português, e evocar luxo e exclusividade.
+Ao analisar uma peça, você considera:
+- A silhueta e formas predominantes (geométricas, orgânicas, florais, abstratas)
+- Materiais e acabamentos visíveis (cristais, zircônias, pérolas, banho de ouro 18k, ródio, rosé)
+- Referências de estilo (art déco, barroco, contemporâneo, boho-chic, minimalista, clássico atemporal)
+- A personalidade da mulher que usaria esta peça
+- Inspirações em elementos da natureza, constelações, flores, pedras preciosas e cultura brasileira
+
+Você cria nomes como as grandes marcas fazem — curtos (2-4 palavras), elegantes, memoráveis e que soam como peças de coleção premium. Pense em nomes como "Essência Royale", "Aurora Diamante", "Celestial Gold", "Pétala Luminosa", "Infinito Brilhante".
+
+Os nomes podem mesclar português com italiano, francês ou inglês quando isso agregar sofisticação. Evite nomes genéricos ou comuns. Cada nome deve soar como uma peça de coleção exclusiva de uma joalheria de alto padrão.
 
 IMPORTANTE: Responda APENAS com um JSON no formato: {"names": ["Nome 1", "Nome 2", "Nome 3", "Nome 4", "Nome 5"]}
 Não inclua nenhum texto adicional, apenas o JSON.`,
@@ -51,7 +56,7 @@ Não inclua nenhum texto adicional, apenas o JSON.`,
             content: [
               {
                 type: 'text',
-                text: 'Analise esta peça de semijoia e sugira 5 nomes exclusivos e sofisticados para ela.',
+                text: 'Analise esta peça com seu olhar de designer internacional e sugira 5 nomes exclusivos dignos de uma grande joalheria.',
               },
               {
                 type: 'image_url',
@@ -84,7 +89,6 @@ Não inclua nenhum texto adicional, apenas o JSON.`,
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
 
-    // Parse the JSON response
     let names: string[];
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -95,7 +99,6 @@ Não inclua nenhum texto adicional, apenas o JSON.`,
         throw new Error('No JSON found');
       }
     } catch {
-      // Fallback: try to extract names from text
       names = content
         .split('\n')
         .map((l: string) => l.replace(/^\d+[\.\)]\s*/, '').trim())
