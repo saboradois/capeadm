@@ -5,10 +5,15 @@ import { Sparkles, Upload, ImageIcon, Loader2, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+interface NameSuggestion {
+  name: string;
+  meaning: string;
+}
+
 export default function NomeadorIATab() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<NameSuggestion[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,7 +44,10 @@ export default function NomeadorIATab() {
       });
       if (error) throw new Error(error.message);
       if (data?.names && Array.isArray(data.names)) {
-        setSuggestions(data.names);
+        const parsed: NameSuggestion[] = data.names.map((n: any) =>
+          typeof n === 'string' ? { name: n, meaning: '' } : { name: n.name || '', meaning: n.meaning || '' }
+        );
+        setSuggestions(parsed);
         toast.success('Nomes gerados com sucesso!');
       } else {
         throw new Error('Resposta inesperada da IA');
@@ -135,20 +143,25 @@ export default function NomeadorIATab() {
       {suggestions.length > 0 && (
         <Card className="glass-card border-accent/20">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Sugestões de Nomes</CardTitle>
+            <CardTitle className="text-lg">✨ Sugestões de Nomes</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
-              {suggestions.map((name, i) => (
+              {suggestions.map((item, i) => (
                 <li
                   key={i}
-                  className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-3"
+                  className="flex items-start justify-between bg-muted/50 rounded-lg px-4 py-3 gap-3"
                 >
-                  <span className="font-medium">
-                    <span className="text-accent mr-2">{i + 1}.</span>
-                    {name}
-                  </span>
-                  <Button size="icon" variant="ghost" onClick={() => copyName(name)}>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-semibold text-base">
+                      <span className="text-accent mr-2">{i + 1}.</span>
+                      {item.name}
+                    </span>
+                    {item.meaning && (
+                      <p className="text-sm text-muted-foreground mt-1">{item.meaning}</p>
+                    )}
+                  </div>
+                  <Button size="icon" variant="ghost" className="shrink-0 mt-0.5" onClick={() => copyName(item.name)}>
                     <Copy className="w-4 h-4" />
                   </Button>
                 </li>
