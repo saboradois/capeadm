@@ -91,12 +91,18 @@ Do not include any additional text, only the JSON.`,
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
 
-    let names: string[];
+    let names: { name: string; meaning: string }[];
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        names = parsed.names || [];
+        if (Array.isArray(parsed.names) && typeof parsed.names[0] === 'object') {
+          names = parsed.names.map((n: any) => ({ name: n.name || '', meaning: n.meaning || '' }));
+        } else if (Array.isArray(parsed.names)) {
+          names = parsed.names.map((n: string) => ({ name: n, meaning: '' }));
+        } else {
+          throw new Error('Invalid format');
+        }
       } else {
         throw new Error('No JSON found');
       }
@@ -105,7 +111,8 @@ Do not include any additional text, only the JSON.`,
         .split('\n')
         .map((l: string) => l.replace(/^\d+[\.\)]\s*/, '').trim())
         .filter((l: string) => l.length > 0 && l.length < 60)
-        .slice(0, 5);
+        .slice(0, 5)
+        .map((n: string) => ({ name: n, meaning: '' }));
     }
 
     return new Response(JSON.stringify({ names: names.slice(0, 5) }), {
